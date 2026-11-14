@@ -1,0 +1,68 @@
+name: Build ALEX TRACK APK
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+
+permissions:
+  contents: read
+
+jobs:
+  build-apk:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Get project files
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Set up Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+
+      - name: Install project dependencies
+        run: npm install --legacy-peer-deps
+
+      - name: Install Capacitor
+        run: |
+          npm install @capacitor/core @capacitor/android
+          npm install --save-dev @capacitor/cli
+
+      - name: Build ALEX TRACK
+        run: npm run build
+
+      - name: Configure Capacitor
+        run: |
+          if [ ! -f capacitor.config.ts ] && [ ! -f capacitor.config.json ] && [ ! -f capacitor.config.js ]; then
+            npx cap init "ALEX TRACK" "com.alextrack.app" --web-dir dist
+          fi
+
+      - name: Create Android project
+        run: |
+          if [ ! -d android ]; then
+            npx cap add android
+          fi
+
+      - name: Sync Android
+        run: npx cap sync android
+
+      - name: Build APK
+        working-directory: android
+        run: |
+          chmod +x gradlew
+          ./gradlew assembleDebug
+
+      - name: Upload APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: ALEX-TRACK-APK
+          path: android/app/build/outputs/apk/debug/app-debug.apk
+          if-no-files-found: error
